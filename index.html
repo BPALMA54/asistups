@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>AsistUPS · Psicología Clínica</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08081a;--bg2:#111130;--bg3:#1a1a3e;
+  --pr:#7c6fff;--pr2:#4ecdc4;
+  --gold:#ffd700;--silver:#c0c0c0;--bronze:#cd7f32;
+  --text:#e8e8f8;--text2:#8888bb;
+  --ok:#4ade80;--err:#f87171;
+  --r:14px;--sh:0 8px 32px rgba(0,0,0,.45);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
+
+/* VIEWS */
+.view{display:none;min-height:100vh;flex-direction:column}
+.view.active{display:flex}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,#120840,#0a1c37);
+  padding:18px 16px 14px;position:sticky;top:0;z-index:100;
+  border-bottom:1px solid rgba(124,111,255,.2)}
+.hdr-row{display:flex;align-items:center;gap:10px}
+.back{background:rgba(255,255,255,.08);border:none;color:var(--text);
+  padding:8px 12px;border-radius:10px;cursor:pointer;font-size:17px;transition:.2s}
+.back:hover{background:rgba(255,255,255,.15)}
+.htitle{font-size:18px;font-weight:700}
+.hsub{font-size:11px;color:var(--text2);margin-top:2px}
+.hlogo{font-size:26px}
+.ml{margin-left:auto}
+
+/* CONTENT */
+.cnt{flex:1;padding:16px;max-width:600px;width:100%;margin:0 auto}
+
+/* HERO */
+.hero{text-align:center;padding:28px 0 20px}
+.hero-ic{font-size:60px;margin-bottom:10px}
+.hero-t{font-size:30px;font-weight:900;
+  background:linear-gradient(135deg,var(--pr),var(--pr2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.hero-s{color:var(--text2);font-size:13px}
+.hero-by{font-size:10px;color:var(--text2);opacity:.6;margin-top:6px}
+
+/* ANNOUNCE */
+.ann{background:linear-gradient(135deg,rgba(255,215,0,.12),rgba(255,165,0,.08));
+  border:1px solid rgba(255,215,0,.3);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:18px;display:none;overflow:hidden}
+.ann.show{display:block}
+.ann-t{color:var(--gold);font-weight:700;font-size:12px;margin-bottom:5px}
+.ann-s{font-size:11px;color:#ffd70099;white-space:nowrap;
+  animation:scroll 18s linear infinite}
+@keyframes scroll{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+
+/* SECTION LABEL */
+.slabel{font-size:10px;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+
+/* MATERIA CARDS */
+.mgrid{display:grid;gap:10px}
+.mcard{background:var(--bg2);border:1px solid rgba(124,111,255,.12);
+  border-radius:var(--r);padding:16px;cursor:pointer;
+  display:flex;align-items:center;gap:12px;
+  position:relative;overflow:hidden;transition:.2s}
+.mcard::before{content:'';position:absolute;left:0;top:0;bottom:0;
+  width:4px;border-radius:4px 0 0 4px}
+.mcard:hover{border-color:rgba(124,111,255,.4);background:var(--bg3);
+  transform:translateY(-2px);box-shadow:var(--sh)}
+.mic{width:46px;height:46px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.minfo{flex:1;min-width:0}
+.mnom{font-weight:700;font-size:13px;line-height:1.3}
+.mmet{color:var(--text2);font-size:11px;margin-top:3px}
+.mbadge{background:rgba(124,111,255,.18);color:var(--pr);
+  padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;flex-shrink:0}
+.live{width:8px;height:8px;background:var(--ok);border-radius:50%;
+  animation:pulse 2s infinite;position:absolute;top:10px;right:10px}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+
+/* SEARCH */
+.sbar{background:var(--bg2);border:1px solid rgba(124,111,255,.2);
+  border-radius:12px;display:flex;align-items:center;gap:8px;
+  padding:11px 14px;margin-bottom:14px}
+.sbar input{background:none;border:none;outline:none;color:var(--text);flex:1;font-size:15px}
+.sbar input::placeholder{color:var(--text2)}
+
+/* STUDENT LIST */
+.slist{display:grid;gap:7px}
+.sitem{background:var(--bg2);border:1px solid rgba(255,255,255,.05);
+  border-radius:12px;padding:13px 14px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;transition:.15s}
+.sitem:hover{border-color:rgba(124,111,255,.3);background:var(--bg3)}
+.savatar{width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:13px;flex-shrink:0;color:#fff}
+.sname{flex:1;font-size:13px;font-weight:600}
+.achip{background:rgba(74,222,128,.15);color:var(--ok);
+  padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
+
+/* STUDENT DETAIL */
+.shero{text-align:center;padding:20px 0 16px}
+.savlg{width:68px;height:68px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:24px;color:#fff;margin:0 auto 10px}
+.sfn{font-size:17px;font-weight:700;margin-bottom:3px}
+.sml{color:var(--text2);font-size:11px}
+
+/* QR CARD */
+.qrcard{background:var(--bg2);border:1px solid rgba(124,111,255,.2);
+  border-radius:var(--r);padding:22px;text-align:center;margin-bottom:14px}
+.qrstatus{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;padding:4px 10px;border-radius:20px;display:inline-block;margin-bottom:14px}
+.qrstatus.on{background:rgba(74,222,128,.15);color:var(--ok)}
+.qrstatus.off{background:rgba(255,255,255,.05);color:var(--text2)}
+#qr-box{display:flex;justify-content:center;align-items:center;min-height:190px}
+#qr-box canvas,#qr-box img{border-radius:10px;padding:10px;background:#fff;max-width:190px}
+.qrhint{color:var(--text2);font-size:11px;margin-top:10px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:var(--bg2);border:1px solid rgba(255,255,255,.05);
+  border-radius:var(--r);padding:14px;text-align:center}
+.statnum{font-size:34px;font-weight:900}
+.statnum.p{color:var(--pr)}
+.statnum.g{color:var(--gold)}
+.statlbl{font-size:10px;color:var(--text2);margin-top:1px}
+
+/* RANKING */
+.rkcard{background:var(--bg2);border:1px solid rgba(255,255,255,.05);
+  border-radius:var(--r);padding:14px;margin-bottom:18px}
+.rktitle{font-weight:700;margin-bottom:10px;font-size:14px}
+.rkitem{display:flex;align-items:center;gap:9px;padding:9px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);animation:si .3s ease}
+.rkitem:last-child{border-bottom:none}
+@keyframes si{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.rkn{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:12px;flex-shrink:0}
+.rkn.r1{background:var(--gold);color:#000}
+.rkn.r2{background:var(--silver);color:#000}
+.rkn.r3{background:var(--bronze);color:#fff}
+.rkn.ro{background:rgba(255,255,255,.07);color:var(--text2)}
+.rknm{flex:1;font-size:12px}
+.rknm.me{color:var(--pr);font-weight:700}
+.rkct{font-weight:700;font-size:13px;color:var(--ok)}
+
+/* ADMIN LOGIN */
+.alog{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;min-height:68vh;gap:14px}
+.alog-ic{font-size:52px}
+.alog-t{font-size:22px;font-weight:800}
+.alog-s{color:var(--text2);font-size:13px;text-align:center}
+input.field{background:var(--bg2);border:1px solid rgba(124,111,255,.3);
+  border-radius:12px;padding:13px 15px;color:var(--text);font-size:15px;
+  width:100%;max-width:300px;outline:none;transition:.2s}
+input.field:focus{border-color:var(--pr)}
+
+/* BUTTONS */
+.btn{padding:13px 24px;border:none;border-radius:12px;
+  font-size:14px;font-weight:700;cursor:pointer;transition:.2s}
+.btn-p{background:linear-gradient(135deg,var(--pr),var(--pr2));color:#fff;
+  width:100%;max-width:300px}
+.btn-p:hover{opacity:.9;transform:translateY(-1px)}
+.btn-g{background:rgba(255,255,255,.08);color:var(--text)}
+.btn-g:hover{background:rgba(255,255,255,.14)}
+.btn-d{background:var(--err);color:#fff}
+.btn-ok{background:var(--ok);color:#000}
+
+/* TABS */
+.tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;
+  margin-bottom:18px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:var(--bg2);border:1px solid rgba(255,255,255,.07);
+  border-radius:9px;padding:7px 12px;color:var(--text2);
+  font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.2s}
+.tab.on{background:var(--pr);border-color:var(--pr);color:#fff}
+
+/* SESSION CARD */
+.sescard{background:var(--bg2);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r);padding:18px;margin-bottom:14px;text-align:center}
+.timer{font-size:46px;font-weight:900;color:var(--pr);
+  font-variant-numeric:tabular-nums;margin:6px 0}
+.sesdate{color:var(--text2);font-size:12px;margin-bottom:14px}
+.btn-start{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;
+  font-size:16px;font-weight:800;padding:16px;border-radius:14px;
+  border:none;cursor:pointer;width:100%;transition:.2s}
+.btn-start:hover{opacity:.9;transform:translateY(-2px)}
+.btn-stop{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;
+  font-size:16px;font-weight:800;padding:16px;border-radius:14px;
+  border:none;cursor:pointer;width:100%;transition:.2s;margin-top:10px}
+.btn-scan{background:linear-gradient(135deg,var(--pr),var(--pr2));color:#fff;
+  font-size:14px;font-weight:700;padding:14px;border-radius:12px;
+  border:none;cursor:pointer;width:100%;display:flex;
+  align-items:center;justify-content:center;gap:8px;margin-bottom:10px}
+
+/* ATT LIST ADMIN */
+.attcard{background:var(--bg2);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.atthdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.atttitle{font-weight:700;font-size:14px}
+.attbadge{background:rgba(74,222,128,.15);color:var(--ok);
+  padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700}
+.atti{display:flex;align-items:center;gap:8px;padding:8px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);animation:si .3s}
+.atti:last-child{border-bottom:none}
+.atiname{flex:1;font-size:12px}
+.atitime{color:var(--text2);font-size:10px}
+
+/* ADD STUDENT */
+.addform{background:var(--bg2);border-radius:var(--r);
+  padding:14px;margin-top:8px;display:none}
+.addform.show{display:block}
+.frow{display:flex;gap:8px}
+
+/* SCANNER */
+#reader{width:100%;border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.scanres{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);
+  border-radius:var(--r);padding:14px;text-align:center;display:none}
+.scanres.show{display:block}
+.scanres.err{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.3)}
+.scanric{font-size:30px}
+.scannm{font-size:15px;font-weight:700;margin-top:5px}
+.scanmsg{font-size:11px;color:var(--text2);margin-top:3px}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;
+  display:none;align-items:center;justify-content:center;padding:16px}
+.modal-ov.show{display:flex}
+.modal{background:var(--bg2);border:1px solid rgba(124,111,255,.3);
+  border-radius:18px;padding:22px;width:100%;max-width:400px}
+.modal-t{font-size:17px;font-weight:700;margin-bottom:14px}
+textarea.field{background:var(--bg3);border:1px solid rgba(124,111,255,.3);
+  border-radius:10px;padding:12px;color:var(--text);font-size:11px;
+  font-family:monospace;width:100%;outline:none;resize:vertical;
+  margin-bottom:10px}
+.mbtns{display:flex;gap:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  background:var(--bg3);border:1px solid rgba(124,111,255,.3);
+  border-radius:12px;padding:11px 18px;font-size:13px;font-weight:600;
+  z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* EMPTY STATE */
+.empty{text-align:center;color:var(--text2);padding:36px 0;font-size:13px}
+.err-msg{color:var(--err);font-size:12px;display:none;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- ===== HOME ===== -->
+<div id="view-home" class="view active">
+  <div class="hdr">
+    <div class="hdr-row">
+      <span class="hlogo">🎓</span>
+      <div>
+        <div class="htitle">AsistUPS</div>
+        <div class="hsub">Psicología Clínica · UPS Guayaquil</div>
+      </div>
+      <button class="btn btn-g ml" style="font-size:12px;padding:8px 12px" onclick="showView('admin-login')">⚙️ Docente</button>
+    </div>
+  </div>
+  <div class="cnt">
+    <div class="hero">
+      <div class="hero-ic">📋</div>
+      <div class="hero-t">Control de Asistencia</div>
+      <div class="hero-s">Busca tu materia y registra tu presencia</div>
+      <div class="hero-by">by Bryan Palma · UPS María Auxiliadora</div>
+    </div>
+
+    <div class="ann" id="ann">
+      <div class="ann-t">🏆 Asistencia Perfecta del Período</div>
+      <div class="ann-s" id="ann-s"></div>
+    </div>
+
+    <div class="slabel">Selecciona tu Materia</div>
+    <div class="mgrid" id="mgrid"></div>
+  </div>
+</div>
+
+<!-- ===== SUBJECT ===== -->
+<div id="view-subject" class="view">
+  <div class="hdr">
+    <div class="hdr-row">
+      <button class="back" onclick="goHome()">←</button>
+      <div>
+        <div class="htitle" id="subj-t">Materia</div>
+        <div class="hsub" id="subj-s"></div>
+      </div>
+    </div>
+  </div>
+  <div class="cnt">
+    <div class="sbar">
+      <span style="color:var(--text2)">🔍</span>
+      <input type="text" id="search" placeholder="Buscar por apellido o nombre..." oninput="filterStudents()">
+    </div>
+    <div class="slabel" id="scount"></div>
+    <div class="slist" id="slist"></div>
+  </div>
+</div>
+
+<!-- ===== STUDENT DETAIL ===== -->
+<div id="view-student" class="view">
+  <div class="hdr">
+    <div class="hdr-row">
+      <button class="back" id="sbk">←</button>
+      <div>
+        <div class="htitle">Mi Asistencia</div>
+        <div class="hsub" id="sv-mat"></div>
+      </div>
+    </div>
+  </div>
+  <div class="cnt">
+    <div class="shero">
+      <div class="savlg" id="sv-av"></div>
+      <div class="sfn" id="sv-name"></div>
+    </div>
+
+    <div class="qrcard">
+      <div class="qrstatus off" id="qrst">⏸ Sin sesión activa</div>
+      <div id="qr-box"><div class="empty">Esperando que el profesor<br>inicie la sesión...</div></div>
+      <div class="qrhint">Tu QR cambia en cada clase. Muéstralo al profesor.</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="statnum p" id="st-count">0</div>
+        <div class="statlbl">Asistencias</div>
+      </div>
+      <div class="stat">
+        <div class="statnum g" id="st-rank">#–</div>
+        <div class="statlbl">Tu ranking</div>
+      </div>
+    </div>
+
+    <div class="rkcard">
+      <div class="rktitle">🏆 Ranking de la Materia</div>
+      <div id="rkList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN LOGIN ===== -->
+<div id="view-admin-login" class="view">
+  <div class="hdr">
+    <div class="hdr-row">
+      <button class="back" onclick="goHome()">←</button>
+      <div class="htitle">Acceso Docente</div>
+    </div>
+  </div>
+  <div class="cnt">
+    <div class="alog">
+      <div class="alog-ic">🔐</div>
+      <div class="alog-t">Panel Docente</div>
+      <div class="alog-s">Ingresa la contraseña para acceder</div>
+      <input type="password" class="field" id="apw" placeholder="Contraseña"
+        onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn btn-p" onclick="doLogin()">Ingresar</button>
+      <div class="err-msg" id="login-err">Contraseña incorrecta</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN PANEL ===== -->
+<div id="view-admin" class="view">
+  <div class="hdr">
+    <div class="hdr-row">
+      <button class="back" onclick="goHome()">←</button>
+      <div>
+        <div class="htitle">Panel Docente</div>
+        <div class="hsub">Bryan Palma · UPS</div>
+      </div>
+      <button class="btn btn-g ml" style="font-size:12px;padding:8px 12px" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+  <div class="cnt">
+    <div class="tabs" id="atabs"></div>
+
+    <div class="sescard">
+      <div class="sesdate" id="sesdate"></div>
+      <div id="ses-off">
+        <div style="color:var(--text2);font-size:13px;margin-bottom:14px">Sin sesión activa en esta materia</div>
+        <button class="btn-start" onclick="startSession()">▶ Iniciar Asistencia</button>
+      </div>
+      <div id="ses-on" style="display:none">
+        <div style="color:var(--ok);font-size:12px;font-weight:700">● SESIÓN ACTIVA</div>
+        <div class="timer" id="timer">00:00</div>
+        <button class="btn-scan" onclick="goScanner()">📷 Escanear QR de estudiantes</button>
+        <button class="btn-stop" onclick="stopSession()">■ Finalizar Sesión</button>
+      </div>
+    </div>
+
+    <div class="attcard">
+      <div class="atthdr">
+        <div class="atttitle">📋 Registros de Hoy</div>
+        <div class="attbadge" id="att-ct">0</div>
+      </div>
+      <div id="att-list"><div class="empty">Sin registros hoy</div></div>
+    </div>
+
+    <button class="btn btn-g" style="width:100%;margin-bottom:6px" onclick="toggleAdd()">＋ Agregar estudiante</button>
+    <div class="addform" id="addform">
+      <div class="frow">
+        <input type="text" class="field" id="new-name" placeholder="Apellidos Nombres" style="flex:1;max-width:none">
+        <button class="btn btn-p" style="max-width:none;padding:13px 16px;white-space:nowrap" onclick="addStudent()">Agregar</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <button class="btn btn-g" style="width:100%;font-size:12px" onclick="showConfigModal()">🔧 Configurar Firebase</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCANNER ===== -->
+<div id="view-scanner" class="view">
+  <div class="hdr">
+    <div class="hdr-row">
+      <button class="back" onclick="stopScanner();showView('admin')">←</button>
+      <div class="htitle">Escanear QR</div>
+    </div>
+  </div>
+  <div class="cnt">
+    <div id="reader"></div>
+    <div class="scanres" id="scanres">
+      <div class="scanric" id="sc-ic"></div>
+      <div class="scannm" id="sc-nm"></div>
+      <div class="scanmsg" id="sc-mg"></div>
+    </div>
+    <div class="empty" style="padding:16px">Apunta la cámara al QR del estudiante</div>
+  </div>
+</div>
+
+<!-- FIREBASE CONFIG MODAL -->
+<div class="modal-ov" id="cfg-modal">
+  <div class="modal">
+    <div class="modal-t">🔧 Configuración Firebase</div>
+    <div style="color:var(--text2);font-size:12px;margin-bottom:12px">
+      Pega el objeto <code>firebaseConfig</code> de tu proyecto Firebase (el mismo de BioMental funciona).
+    </div>
+    <textarea class="field" id="cfg-input" rows="8"
+      placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+    <div class="mbtns">
+      <button class="btn btn-p" style="flex:1;max-width:none" onclick="saveConfig()">Guardar y recargar</button>
+      <button class="btn btn-g" onclick="closeConfig()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONTRASEÑA — cámbiala cuando quieras
+// ============================================================
+const PASS = 'ups2024bryan';
+
+// ============================================================
+// MATERIAS
+// ============================================================
+const MATERIAS = [
+  {id:'int-crisis',  nom:'Intervención en Crisis',                            abrev:'Int. Crisis', nivel:6,g:1,ic:'🆘',col:'#f97316'},
+  {id:'psc-g1',      nom:'Prácticas de Servicio Comunitario',                  abrev:'PSC – G1',   nivel:6,g:1,ic:'🤝',col:'#8b5cf6'},
+  {id:'psc-g2',      nom:'Prácticas de Servicio Comunitario',                  abrev:'PSC – G2',   nivel:6,g:2,ic:'🤝',col:'#6366f1'},
+  {id:'emer-desast', nom:'Psicología de Emergencias, Desastres y Duelo',       abrev:'Emerg.',     nivel:7,g:1,ic:'🌊',col:'#0ea5e9'},
+  {id:'sal-men-1',   nom:'Psicología de la Salud Mental I',                    abrev:'Sal. Mental',nivel:3,g:1,ic:'🧠',col:'#10b981'},
+  {id:'tec-entr',    nom:'Técnicas de Entrevista y Evaluación',                abrev:'Téc. Entrev',nivel:2,g:1,ic:'🗣️',col:'#ec4899'},
+];
+
+// ============================================================
+// ESTUDIANTES BASE (desde los Excel)
+// ============================================================
+let STUDENTS = [
+  // INTERVENCIÓN EN CRISIS
+  {id:'ic01',m:'int-crisis', nom:'Alcivar Quisingo Rebecca Daniela'},
+  {id:'ic02',m:'int-crisis', nom:'Andrade Alvarado Nathalia Anahi'},
+  {id:'ic03',m:'int-crisis', nom:'Argudo Jalon Carlos Xavier'},
+  {id:'ic04',m:'int-crisis', nom:'Barreros Gonzalez Ingrid Elizabeth'},
+  {id:'ic05',m:'int-crisis', nom:'Cañizares Suarez Alanis Tamara'},
+  {id:'ic06',m:'int-crisis', nom:'Diaz Mejia Angelica Andrea'},
+  {id:'ic07',m:'int-crisis', nom:'Dominguez Vera Johanna Abigail'},
+  {id:'ic08',m:'int-crisis', nom:'Estrada Aviles Lian Gabriel'},
+  {id:'ic09',m:'int-crisis', nom:'Figueroa Pintado Jordy Jeampierre'},
+  {id:'ic10',m:'int-crisis', nom:'Gonzalez Lopez Maria Fernanda'},
+  {id:'ic11',m:'int-crisis', nom:'Guevara Pico Paula Nazareth'},
+  {id:'ic12',m:'int-crisis', nom:'Gutierrez Morocho Christopher Jair'},
+  {id:'ic13',m:'int-crisis', nom:'Intriago Briones Kristel Dayana'},
+  {id:'ic14',m:'int-crisis', nom:'Loaiza Hernandez Luis Andres'},
+  {id:'ic15',m:'int-crisis', nom:'Loor Mite Edison Steven'},
+  {id:'ic16',m:'int-crisis', nom:'Miño Gellibert Rebecca Isabel'},
+  {id:'ic17',m:'int-crisis', nom:'Obando Balladares Danna Jhulisa'},
+  {id:'ic18',m:'int-crisis', nom:'Ocampo Orlando Cristhian Joel'},
+  {id:'ic19',m:'int-crisis', nom:'Reyna Torres Sergio Santiago'},
+  {id:'ic20',m:'int-crisis', nom:'Sanchez Santos Jericson Jair'},
+  {id:'ic21',m:'int-crisis', nom:'Santana Arriaga Geovanna Melissa'},
+  {id:'ic22',m:'int-crisis', nom:'Yepez Mora Carlos Adrian'},
+  // PSC G1
+  {id:'p1-01',m:'psc-g1', nom:'Acosta Aguilera Mayerly Jacqueline'},
+  {id:'p1-02',m:'psc-g1', nom:'Adrian Garcia Andres Eduardo'},
+  {id:'p1-03',m:'psc-g1', nom:'Ayovi Zambrano Calvyn Ariel'},
+  {id:'p1-04',m:'psc-g1', nom:'Carriel Bravo Joselyn Yadira'},
+  {id:'p1-05',m:'psc-g1', nom:'Castro Lara Daniela Carolina'},
+  {id:'p1-06',m:'psc-g1', nom:'Cercado Albuja Maria Jose'},
+  {id:'p1-07',m:'psc-g1', nom:'Desiderio Leon Marjorie Stephania'},
+  {id:'p1-08',m:'psc-g1', nom:'Galarraga Huacon Alejandra Paola'},
+  {id:'p1-09',m:'psc-g1', nom:'Gomez Martillo Nicole Valeska'},
+  {id:'p1-10',m:'psc-g1', nom:'Hipo Robalino Samuel Martin'},
+  {id:'p1-11',m:'psc-g1', nom:'Jimenez Del Rosario Heydi Naomy'},
+  {id:'p1-12',m:'psc-g1', nom:'Moreira Cruz Aslhy Scarleth'},
+  {id:'p1-13',m:'psc-g1', nom:'Moreno Salazar Christian Misael'},
+  {id:'p1-14',m:'psc-g1', nom:'Romero Ramirez Abraham Jired'},
+  {id:'p1-15',m:'psc-g1', nom:'Vera Sierra Enzo Boanerges'},
+  {id:'p1-16',m:'psc-g1', nom:'Yagual Pluas Victor Santiago'},
+  {id:'p1-17',m:'psc-g1', nom:'Zavala Plaza Brithany Scarleth'},
+  // PSC G2
+  {id:'p2-01',m:'psc-g2', nom:'Alcivar Ascencio Moises Isaias'},
+  {id:'p2-02',m:'psc-g2', nom:'Bravo Pisco Alejandra Isabel'},
+  {id:'p2-03',m:'psc-g2', nom:'Bravo Tamayo Fabiana Marina'},
+  {id:'p2-04',m:'psc-g2', nom:'Engracia Marcial Dayanna Victoria'},
+  {id:'p2-05',m:'psc-g2', nom:'Jimenez Alvarado Maria Belen'},
+  {id:'p2-06',m:'psc-g2', nom:'Jordan Lindao Maria Gracia'},
+  {id:'p2-07',m:'psc-g2', nom:'Leon Moreno Emily Georgina'},
+  {id:'p2-08',m:'psc-g2', nom:'Ortiz Cucalon Mayerly Jacqueline'},
+  {id:'p2-09',m:'psc-g2', nom:'Rios Quinde Emily Itaty'},
+  {id:'p2-10',m:'psc-g2', nom:'Sotomayor De La Cuadra Domenica Geovanna'},
+  {id:'p2-11',m:'psc-g2', nom:'Valle Rosero Camila Carolina'},
+  {id:'p2-12',m:'psc-g2', nom:'Yela Bonilla Viviana Paulette'},
+  // EMERGENCIAS DESASTRES DUELO
+  {id:'ed01',m:'emer-desast', nom:'Burgos Delgado Jordan Elian'},
+  {id:'ed02',m:'emer-desast', nom:'Cordova Mayorga Arturo Sebastian'},
+  {id:'ed03',m:'emer-desast', nom:'Gavilanes Sanchez Isaac Omar'},
+  {id:'ed04',m:'emer-desast', nom:'Lozada Ortiz Jenniffer Veronica'},
+  {id:'ed05',m:'emer-desast', nom:'Ordoñez Palacios Ana Maria'},
+  // SALUD MENTAL I
+  {id:'sm01',m:'sal-men-1', nom:'Alvarado Vera Ammy Amada'},
+  {id:'sm02',m:'sal-men-1', nom:'Alvario Arias Cesar Alejandro'},
+  {id:'sm03',m:'sal-men-1', nom:'Anchundia Garcia Rebeca Victoria'},
+  {id:'sm04',m:'sal-men-1', nom:'Borrero Castro Laurents Angeline'},
+  {id:'sm05',m:'sal-men-1', nom:'Castro Rivera Alisson Nicole'},
+  {id:'sm06',m:'sal-men-1', nom:'De La Torre Espinoza Fiorella Dayline'},
+  {id:'sm07',m:'sal-men-1', nom:'Eugenio Escobar Axel Donato'},
+  {id:'sm08',m:'sal-men-1', nom:'Mejia Mejia Maria Ivette'},
+  {id:'sm09',m:'sal-men-1', nom:'Muentes Carrillo Keyla Romina'},
+  {id:'sm10',m:'sal-men-1', nom:'Sarmiento Velez Nefi Geovanny'},
+  // TÉCNICAS ENTREVISTA
+  {id:'te01',m:'tec-entr', nom:'Almeida Aguirre Juan Diego'},
+  {id:'te02',m:'tec-entr', nom:'Asencio Dominguez Kerly Susana'},
+  {id:'te03',m:'tec-entr', nom:'Chalaco Valle Patty Solange'},
+  {id:'te04',m:'tec-entr', nom:'Dominguez Yagual Darwin Daniel'},
+  {id:'te05',m:'tec-entr', nom:'Espinoza Garcia Valeria Johanna'},
+  {id:'te06',m:'tec-entr', nom:'Gavilanez Quimi Angie Samantha'},
+  {id:'te07',m:'tec-entr', nom:'Gresely Cornejo Andrea Milena'},
+  {id:'te08',m:'tec-entr', nom:'Izquierdo Macas Angela Vanessa'},
+  {id:'te09',m:'tec-entr', nom:'Jara Ormeño Ambar Romina'},
+  {id:'te10',m:'tec-entr', nom:'Lopez Villalta Micaela Alexandra'},
+  {id:'te11',m:'tec-entr', nom:'Montes Montoya Edu Aldair'},
+  {id:'te12',m:'tec-entr', nom:'Mora Carrera Ruth Scarlet'},
+  {id:'te13',m:'tec-entr', nom:'Moreira Montufar Kyra Azucena'},
+  {id:'te14',m:'tec-entr', nom:'Morocho Paladines Angie Maria'},
+  {id:'te15',m:'tec-entr', nom:'Navarrete Ordoñez Aida Valentina'},
+  {id:'te16',m:'tec-entr', nom:'Oyola Matamoros Nathalia Alejandra'},
+  {id:'te17',m:'tec-entr', nom:'Pacheco Parrales Ahnika Stefania'},
+  {id:'te18',m:'tec-entr', nom:'Paredes Barandearan Daniella Estefania'},
+  {id:'te19',m:'tec-entr', nom:'Quevedo Granda Carmen Betzabe'},
+  {id:'te20',m:'tec-entr', nom:'Quimis Villamar Arianna Gabriela'},
+  {id:'te21',m:'tec-entr', nom:'Ramirez Timbiano Julio Alexander'},
+  {id:'te22',m:'tec-entr', nom:'Rivas Sellan Steven Joel'},
+  {id:'te23',m:'tec-entr', nom:'Rosales Pincay Michael Stephano'},
+  {id:'te24',m:'tec-entr', nom:'Torres Velez Brianna Elizabeth'},
+  {id:'te25',m:'tec-entr', nom:'Ubilla Hoyos Maria De Los Angeles'},
+  {id:'te26',m:'tec-entr', nom:'Vera Lindao Dariana Luzceri'},
+  {id:'te27',m:'tec-entr', nom:'Vergara Herrera Keyla Elizabeth'},
+  {id:'te28',m:'tec-entr', nom:'Vizueta Bayas Ada Belen'},
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let db = null;
+let curView = 'home';
+let curMat = null;   // materia id
+let curSt  = null;   // student object
+let attCounts = {};  // {studentId: number}
+let sessions = {};   // {materiaId: {activa,token,inicio,...}}
+let timerId = null;
+let sesStart = null;
+let scanner = null;
+let unsubs = [];
+
+// ============================================================
+// FIREBASE
+// ============================================================
+function initDB() {
+  const cfg = localStorage.getItem('asistups_cfg');
+  if (!cfg) return false;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(JSON.parse(cfg));
+    db = firebase.firestore();
+    listenGlobal();
+    loadExtra();
+    return true;
+  } catch(e) { console.error(e); return false; }
+}
+
+function listenGlobal() {
+  // Sessions
+  unsubs.push(db.collection('sesiones').onSnapshot(snap => {
+    sessions = {};
+    snap.forEach(d => { sessions[d.id] = d.data(); });
+    onSessionsChange();
+  }));
+  // Attendance counts per materia
+  MATERIAS.forEach(mat => {
+    unsubs.push(
+      db.collection('asist').doc(mat.id).collection('reg')
+        .onSnapshot(snap => {
+          const cnt = {};
+          snap.forEach(d => {
+            const sid = d.data().sid;
+            cnt[sid] = (cnt[sid]||0) + 1;
+          });
+          STUDENTS.filter(s => s.m === mat.id).forEach(s => {
+            attCounts[s.id] = cnt[s.id] || 0;
+          });
+          refreshCounts(mat.id);
+        })
+    );
+  });
+}
+
+function onSessionsChange() {
+  if (curView === 'home') renderHome();
+  if (curView === 'student' && curSt) refreshQR();
+  if (curView === 'admin') refreshAdminSession();
+}
+
+function refreshCounts(matId) {
+  if (curView === 'subject' && curMat === matId) renderList(document.getElementById('search').value);
+  if (curView === 'student' && curSt?.m === matId) refreshStats();
+  if (curView === 'home') renderAnnounce();
+  if (curView === 'admin' && curMat === matId) loadToday();
+}
+
+async function loadExtra() {
+  if (!db) return;
+  for (const mat of MATERIAS) {
+    try {
+      const snap = await db.collection('extra').doc(mat.id).collection('est').get();
+      snap.forEach(d => {
+        if (!STUDENTS.find(s => s.id === d.id))
+          STUDENTS.push({id:d.id, m:mat.id, nom:d.data().nom, extra:true});
+      });
+    } catch(e){}
+  }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  curView = name;
+  window.scrollTo(0,0);
+}
+
+function goHome() {
+  stopScanner();
+  clearTimer();
+  showView('home');
+  renderHome();
+}
+
+// ============================================================
+// HOME
+// ============================================================
+function renderHome() {
+  const g = document.getElementById('mgrid');
+  g.innerHTML = MATERIAS.map(m => {
+    const cnt = STUDENTS.filter(s => s.m === m.id).length;
+    const live = sessions[m.id]?.activa;
+    return `<div class="mcard" onclick="openMat('${m.id}')" style="--bc:${m.col}">
+      <style>.mcard[onclick*="${m.id}"]::before{background:linear-gradient(180deg,${m.col},${m.col}88)}</style>
+      ${live?'<div class="live"></div>':''}
+      <div class="mic" style="background:linear-gradient(135deg,${m.col},${m.col}77)">${m.ic}</div>
+      <div class="minfo">
+        <div class="mnom">${m.nom}</div>
+        <div class="mmet">Nivel ${m.nivel} · Grupo ${m.g} · ${cnt} estudiantes</div>
+      </div>
+      <div class="mbadge">${m.abrev}</div>
+    </div>`;
+  }).join('');
+  renderAnnounce();
+}
+
+function renderAnnounce() {
+  const vals = Object.entries(attCounts).filter(([,v]) => v > 0);
+  if (!vals.length) { document.getElementById('ann').classList.remove('show'); return; }
+  const max = Math.max(...vals.map(([,v])=>v));
+  if (max < 3) { document.getElementById('ann').classList.remove('show'); return; }
+  const stars = vals.filter(([,v])=>v===max)
+    .map(([id]) => STUDENTS.find(s=>s.id===id)?.nom.split(' ').slice(0,2).join(' '))
+    .filter(Boolean);
+  if (!stars.length) return;
+  document.getElementById('ann').classList.add('show');
+  document.getElementById('ann-s').textContent = `🌟 ${stars.join(' · ')} — ${max} asistencias`;
+}
+
+// ============================================================
+// SUBJECT
+// ============================================================
+function openMat(mid) {
+  curMat = mid;
+  const m = MATERIAS.find(x=>x.id===mid);
+  document.getElementById('subj-t').textContent = m.nom;
+  document.getElementById('subj-s').textContent = `Nivel ${m.nivel} · Grupo ${m.g}`;
+  document.getElementById('search').value = '';
+  renderList('');
+  showView('subject');
+  if (!db) initDB();
+}
+
+function byMat(mid) {
+  return STUDENTS.filter(s=>s.m===mid).sort((a,b)=>a.nom.localeCompare(b.nom,'es'));
+}
+
+function renderList(q) {
+  const list = byMat(curMat).filter(s=>!q||s.nom.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('scount').textContent = `${list.length} estudiante${list.length!==1?'s':''}`;
+  const el = document.getElementById('slist');
+  if (!list.length) { el.innerHTML='<div class="empty">Sin resultados</div>'; return; }
+  el.innerHTML = list.map(s => {
+    const ini = s.nom.split(' ').slice(0,2).map(w=>w[0]).join('');
+    const m = MATERIAS.find(x=>x.id===s.m);
+    const cnt = attCounts[s.id]||0;
+    return `<div class="sitem" onclick="openSt('${s.id}')">
+      <div class="savatar" style="background:linear-gradient(135deg,${m.col},${m.col}88)">${ini}</div>
+      <div class="sname">${s.nom}</div>
+      ${cnt?`<div class="achip">${cnt} ✓</div>`:''}
+      <span style="color:var(--text2);margin-left:4px">›</span>
+    </div>`;
+  }).join('');
+}
+
+function filterStudents() { renderList(document.getElementById('search').value); }
+
+// ============================================================
+// STUDENT DETAIL
+// ============================================================
+function openSt(sid) {
+  curSt = STUDENTS.find(s=>s.id===sid);
+  if (!curSt) return;
+  const m = MATERIAS.find(x=>x.id===curSt.m);
+  const ini = curSt.nom.split(' ').slice(0,2).map(w=>w[0]).join('');
+  document.getElementById('sv-av').textContent = ini;
+  document.getElementById('sv-av').style.background = `linear-gradient(135deg,${m.col},${m.col}88)`;
+  document.getElementById('sv-name').textContent = curSt.nom;
+  document.getElementById('sv-mat').textContent = m.nom;
+  document.getElementById('sbk').onclick = () => openMat(curSt.m);
+  if (!db) initDB();
+  refreshQR();
+  refreshStats();
+  showView('student');
+}
+
+function refreshQR() {
+  if (!curSt) return;
+  const ses = sessions[curSt.m];
+  const on = ses?.activa;
+  const lbl = document.getElementById('qrst');
+  const box = document.getElementById('qr-box');
+  if (on) {
+    lbl.className='qrstatus on'; lbl.textContent='🟢 Sesión activa — muestra tu QR';
+    const data = `ASISTUPS|${curSt.id}|${ses.token}`;
+    box.innerHTML='<div id="qr-inner"></div>';
+    new QRCode(document.getElementById('qr-inner'),{
+      text:data, width:190, height:190,
+      colorDark:'#000', colorLight:'#fff',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  } else {
+    lbl.className='qrstatus off'; lbl.textContent='⏸ Sin sesión activa';
+    box.innerHTML='<div class="empty">El profesor iniciará la sesión<br>y aquí aparecerá tu QR</div>';
+  }
+}
+
+function refreshStats() {
+  if (!curSt) return;
+  const cnt = attCounts[curSt.id]||0;
+  document.getElementById('st-count').textContent = cnt;
+  const list = byMat(curSt.m).map(s=>({...s,c:attCounts[s.id]||0})).sort((a,b)=>b.c-a.c);
+  const rank = list.findIndex(s=>s.id===curSt.id)+1;
+  document.getElementById('st-rank').textContent = '#'+rank;
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('rkList').innerHTML = list.slice(0,12).map((s,i)=>{
+    const r=i+1, isMe=s.id===curSt.id;
+    const cls=r<=3?`r${r}`:'ro', med=r<=3?medals[r-1]:r;
+    return `<div class="rkitem">
+      <div class="rkn ${cls}">${med}</div>
+      <div class="rknm ${isMe?'me':''}">${s.nom}${isMe?' (tú)':''}</div>
+      <div class="rkct">${s.c}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// ADMIN LOGIN
+// ============================================================
+function doLogin() {
+  const pw = document.getElementById('apw').value;
+  document.getElementById('login-err').style.display = pw===PASS?'none':'block';
+  if (pw!==PASS) return;
+  document.getElementById('apw').value='';
+  if (!db) { const ok=initDB(); if(!ok){showConfigModal();return;} }
+  showView('admin');
+  renderAdmin();
+}
+
+function doLogout() { stopScanner(); goHome(); }
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+function renderAdmin() {
+  if (!curMat) curMat = MATERIAS[0].id;
+  const tabs = document.getElementById('atabs');
+  tabs.innerHTML = MATERIAS.map(m =>
+    `<button class="tab ${m.id===curMat?'on':''}" onclick="selTab('${m.id}',this)">${m.abrev}</button>`
+  ).join('');
+  document.getElementById('sesdate').textContent =
+    new Date().toLocaleDateString('es-EC',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  refreshAdminSession();
+  loadToday();
+}
+
+function selTab(mid, btn) {
+  curMat = mid;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  refreshAdminSession();
+  loadToday();
+}
+
+function refreshAdminSession() {
+  if (curView!=='admin') return;
+  const ses = sessions[curMat];
+  const on = ses?.activa;
+  document.getElementById('ses-off').style.display = on?'none':'block';
+  document.getElementById('ses-on').style.display = on?'block':'none';
+  if (on) {
+    if (!timerId) {
+      sesStart = ses.inicio?.toDate ? ses.inicio.toDate() : new Date();
+      startTimer();
+    }
+  } else { clearTimer(); }
+}
+
+function startTimer() {
+  clearTimer();
+  timerId = setInterval(()=>{
+    const e = Math.floor((Date.now()-sesStart)/1000);
+    const m=String(Math.floor(e/60)).padStart(2,'0'), s=String(e%60).padStart(2,'0');
+    const el=document.getElementById('timer'); if(el) el.textContent=`${m}:${s}`;
+  },1000);
+}
+function clearTimer() { if(timerId){clearInterval(timerId);timerId=null;} }
+
+function mkToken() { return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
+
+async function startSession() {
+  if (!db) return;
+  try {
+    await db.collection('sesiones').doc(curMat).set({
+      activa:true, token:mkToken(), matId:curMat,
+      fecha:new Date().toISOString().slice(0,10),
+      inicio:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    sesStart = new Date();
+    toast('✅ Sesión iniciada');
+  } catch(e){ toast('❌ '+e.message); }
+}
+
+async function stopSession() {
+  if (!db) return;
+  try {
+    await db.collection('sesiones').doc(curMat).update({
+      activa:false, fin:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    clearTimer();
+    toast('⏹ Sesión finalizada');
+  } catch(e){ toast('❌ '+e.message); }
+}
+
+async function loadToday() {
+  if (!db||curView!=='admin') return;
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const snap = await db.collection('asist').doc(curMat).collection('reg')
+      .where('fecha','==',today).get();
+    const list = document.getElementById('att-list');
+    const badge = document.getElementById('att-ct');
+    if (snap.empty) {
+      list.innerHTML='<div class="empty">Sin registros hoy</div>';
+      badge.textContent='0'; return;
+    }
+    badge.textContent = snap.size;
+    const rows = [];
+    snap.forEach(d=>rows.push(d.data()));
+    rows.sort((a,b)=>(b.ts?.seconds||0)-(a.ts?.seconds||0));
+    list.innerHTML = rows.map(d=>{
+      const t = d.ts?.toDate?.().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})||'';
+      return `<div class="atti">
+        <span style="color:var(--ok)">✓</span>
+        <span class="atiname">${d.nom||d.sid}</span>
+        <span class="atitime">${t}</span>
+      </div>`;
+    }).join('');
+  } catch(e){ console.error(e); }
+}
+
+function toggleAdd() { document.getElementById('addform').classList.toggle('show'); }
+
+async function addStudent() {
+  const inp = document.getElementById('new-name');
+  const nom = inp.value.trim();
+  if (!nom) return;
+  const id = 'ext-'+Date.now();
+  STUDENTS.push({id, m:curMat, nom:nom.toUpperCase(), extra:true});
+  inp.value='';
+  toast('✅ Estudiante agregado');
+  if (db) {
+    try {
+      await db.collection('extra').doc(curMat).collection('est').doc(id).set({
+        nom:nom.toUpperCase(), m:curMat,
+        creado:'Bryan Palma', ts:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e){}
+  }
+}
+
+// ============================================================
+// SCANNER
+// ============================================================
+function goScanner() {
+  showView('scanner');
+  document.getElementById('scanres').classList.remove('show');
+  setTimeout(startScanner, 300);
+}
+
+function startScanner() {
+  if (scanner) stopScanner();
+  scanner = new Html5Qrcode('reader');
+  scanner.start(
+    {facingMode:'environment'},
+    {fps:10, qrbox:{width:260,height:260}},
+    onQR, ()=>{}
+  ).catch(e=>{ toast('❌ Sin acceso a cámara'); console.error(e); });
+}
+
+function stopScanner() {
+  if (scanner) { scanner.stop().catch(()=>{}); scanner=null; }
+}
+
+async function onQR(raw) {
+  const p = raw.split('|');
+  if (p[0]!=='ASISTUPS'||p.length!==3) {
+    showScan(false,'❌','QR inválido','No pertenece a AsistUPS'); return;
+  }
+  const [, sid, tok] = p;
+  const ses = sessions[curMat];
+  if (!ses?.activa||ses.token!==tok) {
+    showScan(false,'⚠️','QR expirado','El estudiante debe recargar su pantalla'); return;
+  }
+  const st = STUDENTS.find(s=>s.id===sid);
+  if (!st) { showScan(false,'❌','No encontrado',sid); return; }
+
+  const today = new Date().toISOString().slice(0,10);
+  if (db) {
+    const ex = await db.collection('asist').doc(curMat).collection('reg')
+      .where('sid','==',sid).where('fecha','==',today).get();
+    if (!ex.empty) { showScan(false,'🔁',st.nom,'Ya registrado hoy'); return; }
+    await db.collection('asist').doc(curMat).collection('reg').add({
+      sid, nom:st.nom, matId:curMat, tok, fecha:today,
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  showScan(true,'✅',st.nom,'¡Asistencia registrada!');
+  setTimeout(()=>document.getElementById('scanres').classList.remove('show'), 2800);
+}
+
+function showScan(ok,ic,nm,mg) {
+  const el = document.getElementById('scanres');
+  el.className='scanres show'+(ok?'':' err');
+  document.getElementById('sc-ic').textContent=ic;
+  document.getElementById('sc-nm').textContent=nm;
+  document.getElementById('sc-mg').textContent=mg;
+}
+
+// ============================================================
+// CONFIG MODAL
+// ============================================================
+function showConfigModal() {
+  document.getElementById('cfg-input').value = localStorage.getItem('asistups_cfg')||'';
+  document.getElementById('cfg-modal').classList.add('show');
+}
+function closeConfig() { document.getElementById('cfg-modal').classList.remove('show'); }
+function saveConfig() {
+  const v = document.getElementById('cfg-input').value.trim();
+  try { JSON.parse(v); localStorage.setItem('asistups_cfg',v); location.reload(); }
+  catch(e){ toast('❌ JSON inválido'); }
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+(async function init() {
+  initDB();
+  renderHome();
+  showView('home');
+})();
+</script>
+</body>
+</html>
