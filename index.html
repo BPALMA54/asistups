@@ -407,10 +407,10 @@ textarea.field{background:var(--bg3);border:1px solid rgba(124,111,255,.3);
 
     <button class="btn btn-g" style="width:100%;margin-bottom:6px" onclick="toggleAdd()">＋ Agregar estudiante</button>
     <div class="addform" id="addform">
-      <div class="frow">
-        <input type="text" class="field" id="new-name" placeholder="Apellidos Nombres" style="flex:1;max-width:none">
-        <button class="btn btn-p" style="max-width:none;padding:13px 16px;white-space:nowrap" onclick="addStudent()">Agregar</button>
-      </div>
+      <input type="text" class="field" id="new-name" placeholder="Apellidos Nombres completos"
+        style="max-width:none;width:100%;margin-bottom:10px;font-size:16px"
+        onkeydown="if(event.key==='Enter')addStudent()">
+      <button class="btn btn-p" style="max-width:none;width:100%;padding:14px" onclick="addStudent()">＋ Agregar estudiante</button>
     </div>
 
     <div style="margin-top:12px">
@@ -595,13 +595,24 @@ let scanner = null;
 let unsubs = [];
 
 // ============================================================
-// FIREBASE
+// FIREBASE CONFIG (hardcoded — mismo proyecto que BioMental)
 // ============================================================
+const DEFAULT_CFG = {
+  apiKey: "AIzaSyDYllMdtOxJg7M6qqc79M0ffR98HwbT2_c",
+  authDomain: "biomental-8e6f8.firebaseapp.com",
+  databaseURL: "https://biomental-8e6f8-default-rtdb.firebaseio.com",
+  projectId: "biomental-8e6f8",
+  storageBucket: "biomental-8e6f8.firebasestorage.app",
+  messagingSenderId: "219460039788",
+  appId: "1:219460039788:web:35ca3c27905d755c841449",
+  measurementId: "G-YLYKCDGGLE"
+};
+
 function initDB() {
-  const cfg = localStorage.getItem('asistups_cfg');
-  if (!cfg) return false;
   try {
-    if (!firebase.apps.length) firebase.initializeApp(JSON.parse(cfg));
+    const stored = localStorage.getItem('asistups_cfg');
+    const cfg = stored ? JSON.parse(stored) : DEFAULT_CFG;
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
     db = firebase.firestore();
     listenGlobal();
     loadExtra();
