@@ -218,6 +218,21 @@ input.field:focus{border-color:var(--pr)}
 .addform.show{display:block}
 .frow{display:flex;gap:8px}
 
+/* HISTORIAL */
+.histcard{background:var(--bg2);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.histday{background:var(--bg3);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.histday-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;cursor:pointer;user-select:none}
+.histday-fecha{font-weight:700;font-size:13px;color:var(--pr2)}
+.histday-ct{background:rgba(124,111,255,.2);color:var(--pr);
+  padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700}
+.histday-body{display:none;padding:0 14px 10px}
+.histday-body.open{display:block}
+.hist-stu{font-size:12px;color:var(--text);padding:4px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:8px;align-items:center}
+.hist-stu:last-child{border-bottom:none}
+.hist-hora{color:var(--text2);font-size:10px;margin-left:auto}
+
 /* SCANNER */
 #reader{width:100%;border-radius:var(--r);overflow:hidden;margin-bottom:14px}
 .scanres{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);
@@ -412,6 +427,19 @@ textarea.field{background:var(--bg3);border:1px solid rgba(124,111,255,.3);
         onkeydown="if(event.key==='Enter')addStudent()">
       <button class="btn btn-p" style="max-width:none;width:100%;padding:14px" onclick="addStudent()">＋ Agregar estudiante</button>
     </div>
+
+    <div class="histcard" id="hist-section" style="display:none">
+      <div class="atthdr" style="margin-bottom:12px">
+        <div class="atttitle">📅 Historial por Fecha</div>
+        <button style="background:rgba(255,255,255,.08);border:none;color:var(--text2);
+          padding:4px 10px;border-radius:8px;cursor:pointer;font-size:11px"
+          onclick="loadHistory()">↻ Actualizar</button>
+      </div>
+      <div id="hist-list"><div class="empty">Cargando...</div></div>
+    </div>
+
+    <button class="btn btn-g" style="width:100%;margin-bottom:14px"
+      onclick="toggleHistory()">📅 Ver Historial de Asistencias</button>
 
     <div style="margin-top:12px">
       <button class="btn btn-g" style="width:100%;font-size:12px" onclick="showConfigModal()">🔧 Configurar Firebase</button>
@@ -857,6 +885,10 @@ function selTab(mid, btn) {
   btn.classList.add('on');
   refreshAdminSession();
   loadToday();
+  // reset historial al cambiar materia
+  histVisible = false;
+  document.getElementById('hist-section').style.display = 'none';
+  document.getElementById('hist-list').innerHTML = '<div class="empty">Cargando...</div>';
 }
 
 function refreshAdminSession() {
@@ -937,6 +969,57 @@ async function loadToday() {
 }
 
 function toggleAdd() { document.getElementById('addform').classList.toggle('show'); }
+
+let histVisible = false;
+function toggleHistory() {
+  histVisible = !histVisible;
+  const sec = document.getElementById('hist-section');
+  sec.style.display = histVisible ? 'block' : 'none';
+  if (histVisible) loadHistory();
+}
+
+async function loadHistory() {
+  if (!db) return;
+  const listEl = document.getElementById('hist-list');
+  listEl.innerHTML = '<div class="empty">Cargando...</div>';
+  try {
+    const snap = await db.collection('asist').doc(curMat).collection('reg')
+      .orderBy('ts','desc').get();
+    if (snap.empty) {
+      listEl.innerHTML = '<div class="empty">Sin registros aún</div>'; return;
+    }
+    // group by fecha
+    const byDate = {};
+    snap.forEach(d => {
+      const r = d.data();
+      const f = r.fecha || r.ts?.toDate?.().toISOString().slice(0,10) || '?';
+      if (!byDate[f]) byDate[f] = [];
+      byDate[f].push(r);
+    });
+    const dates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+    listEl.innerHTML = dates.map((f,i) => {
+      const rows = byDate[f];
+      rows.sort((a,b)=>(a.ts?.seconds||0)-(b.ts?.seconds||0));
+      const [y,m,d] = f.split('-');
+      const label = `${d}/${m}/${y}`;
+      const bodyId = 'hb-'+i;
+      const items = rows.map(r => {
+        const hora = r.ts?.toDate?.().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})||'';
+        return `<div class="hist-stu"><span>✓</span><span>${r.nom||r.sid}</span><span class="hist-hora">${hora}</span></div>`;
+      }).join('');
+      return `<div class="histday">
+        <div class="histday-hdr" onclick="document.getElementById('${bodyId}').classList.toggle('open')">
+          <span class="histday-fecha">📅 ${label}</span>
+          <span class="histday-ct">${rows.length} estudiante${rows.length!==1?'s':''}</span>
+        </div>
+        <div class="histday-body" id="${bodyId}">${items}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div class="empty" style="color:var(--err)">Error al cargar historial</div>';
+    console.error(e);
+  }
+}
 
 async function addStudent() {
   const inp = document.getElementById('new-name');
