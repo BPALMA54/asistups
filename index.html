@@ -420,6 +420,10 @@ textarea.field{background:var(--bg3);border:1px solid rgba(124,111,255,.3);
       <div id="att-list"><div class="empty">Sin registros hoy</div></div>
     </div>
 
+    <button class="btn" style="width:100%;margin-bottom:6px;background:rgba(248,113,113,.15);
+      border:1px solid rgba(248,113,113,.3);color:#f87171;padding:12px;border-radius:12px;
+      font-weight:700;cursor:pointer" onclick="limpiarDuplicados()">🧹 Limpiar registros duplicados</button>
+
     <button class="btn btn-g" style="width:100%;margin-bottom:6px" onclick="toggleAdd()">＋ Agregar estudiante</button>
     <div class="addform" id="addform">
       <input type="text" class="field" id="new-name" placeholder="Apellidos Nombres completos"
@@ -926,6 +930,8 @@ async function startSession() {
       inicio:firebase.firestore.FieldValue.serverTimestamp()
     });
     sesStart = new Date();
+    scannedToday.clear(); // limpiar memoria local al iniciar nueva sesión
+    scanLock = false;
     toast('✅ Sesión iniciada');
   } catch(e){ toast('❌ '+e.message); }
 }
@@ -969,6 +975,51 @@ async function loadToday() {
 }
 
 function toggleAdd() { document.getElementById('addform').classList.toggle('show'); }
+
+async function limpiarDuplicados() {
+  if (!db) return;
+  if (!confirm('¿Eliminar registros duplicados de esta materia? Se conservará solo el primero de cada estudiante por día.')) return;
+  toast('⏳ Limpiando duplicados...');
+  try {
+    const snap = await db.collection('asist').doc(curMat).collection('reg').get();
+    if (snap.empty) { toast('✅ Sin registros que limpiar'); return; }
+
+    // agrupar por sid+fecha, ordenar por timestamp y marcar duplicados
+    const grupos = {};
+    snap.forEach(d => {
+      const r = d.data();
+      const key = (r.sid||'?') + '_' + (r.fecha||'?');
+      if (!grupos[key]) grupos[key] = [];
+      grupos[key].push({ id: d.id, ts: r.ts?.seconds || 0 });
+    });
+
+    // para cada grupo ordenar por ts y borrar todos excepto el primero
+    const aEliminar = [];
+    Object.values(grupos).forEach(arr => {
+      if (arr.length <= 1) return;
+      arr.sort((a,b) => a.ts - b.ts); // el más antiguo primero
+      arr.slice(1).forEach(r => aEliminar.push(r.id)); // los demás son duplicados
+    });
+
+    if (aEliminar.length === 0) { toast('✅ No hay duplicados'); return; }
+
+    // borrar en lotes de 10
+    for (let i = 0; i < aEliminar.length; i += 10) {
+      const lote = aEliminar.slice(i, i+10);
+      const batch = db.batch();
+      lote.forEach(id => {
+        batch.delete(db.collection('asist').doc(curMat).collection('reg').doc(id));
+      });
+      await batch.commit();
+    }
+
+    toast(`✅ Se eliminaron ${aEliminar.length} duplicados`);
+    loadToday();
+  } catch(e) {
+    toast('❌ Error: ' + e.message);
+    console.error(e);
+  }
+}
 
 let histVisible = false;
 function toggleHistory() {
@@ -1062,31 +1113,55 @@ function stopScanner() {
   if (scanner) { scanner.stop().catch(()=>{}); scanner=null; }
 }
 
+let scanLock = false;          // bloquea mientras procesa un QR
+const scannedToday = new Set(); // memoria local: sid ya registrados esta sesión
+
 async function onQR(raw) {
+  if (scanLock) return;          // ignorar si ya está procesando
+  scanLock = true;
+
   const p = raw.split('|');
   if (p[0]!=='ASISTUPS'||p.length!==3) {
-    showScan(false,'❌','QR inválido','No pertenece a AsistUPS'); return;
+    showScan(false,'❌','QR inválido','No pertenece a AsistUPS');
+    setTimeout(()=>{ scanLock=false; },1500); return;
   }
   const [, sid, tok] = p;
   const ses = sessions[curMat];
   if (!ses?.activa||ses.token!==tok) {
-    showScan(false,'⚠️','QR expirado','El estudiante debe recargar su pantalla'); return;
+    showScan(false,'⚠️','QR expirado','El estudiante debe recargar su pantalla');
+    setTimeout(()=>{ scanLock=false; },1500); return;
   }
   const st = STUDENTS.find(s=>s.id===sid);
-  if (!st) { showScan(false,'❌','No encontrado',sid); return; }
+  if (!st) { showScan(false,'❌','No encontrado',sid); setTimeout(()=>{ scanLock=false; },1500); return; }
+
+  // bloqueo local instantáneo (evita duplicados antes de que Firestore responda)
+  if (scannedToday.has(sid)) {
+    showScan(false,'🔁',st.nom,'Ya registrado hoy');
+    setTimeout(()=>{ scanLock=false; },2000); return;
+  }
+  scannedToday.add(sid); // marcar inmediatamente en memoria
 
   const today = new Date().toISOString().slice(0,10);
   if (db) {
-    const ex = await db.collection('asist').doc(curMat).collection('reg')
-      .where('sid','==',sid).where('fecha','==',today).get();
-    if (!ex.empty) { showScan(false,'🔁',st.nom,'Ya registrado hoy'); return; }
-    await db.collection('asist').doc(curMat).collection('reg').add({
-      sid, nom:st.nom, matId:curMat, tok, fecha:today,
-      ts:firebase.firestore.FieldValue.serverTimestamp()
-    });
+    try {
+      const ex = await db.collection('asist').doc(curMat).collection('reg')
+        .where('sid','==',sid).where('fecha','==',today).get();
+      if (!ex.empty) {
+        showScan(false,'🔁',st.nom,'Ya registrado hoy');
+        setTimeout(()=>{ scanLock=false; },2000); return;
+      }
+      await db.collection('asist').doc(curMat).collection('reg').add({
+        sid, nom:st.nom, matId:curMat, tok, fecha:today,
+        ts:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) {
+      scannedToday.delete(sid); // revertir si falló
+      showScan(false,'❌',st.nom,'Error al guardar');
+      setTimeout(()=>{ scanLock=false; },2000); return;
+    }
   }
   showScan(true,'✅',st.nom,'¡Asistencia registrada!');
-  setTimeout(()=>document.getElementById('scanres').classList.remove('show'), 2800);
+  setTimeout(()=>{ scanLock=false; document.getElementById('scanres').classList.remove('show'); }, 2800);
 }
 
 function showScan(ok,ic,nm,mg) {
